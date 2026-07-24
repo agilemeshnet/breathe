@@ -2,110 +2,37 @@
 
 **Memory frameworks retrieve. Breathe remembers.**
 
-We ran a single AI conversation for five days - across symbology theory, regulatory research, architecture documentation, and product design - without the model losing its thread. This library is how.
+You know what it feels like to forget someone's name mid-sentence. The face is right there, the context is right there, you were just talking about them - but the word is gone. Now imagine that happening to every conversation you have ever had, every few hours, permanently.
 
-## The problem
+That is what happens to an AI in a long conversation. The context window fills. Older material compresses. The model does not know it has forgotten. It continues speaking with the same confidence, but the thread that connected Tuesday's decision to Thursday's question has silently snapped.
 
-AI conversations have a ceiling. The context window fills, older messages compress, and the model forgets why it made a decision even if it remembers the decision itself. For short tasks this doesn't matter. For long-running work - research spanning days, projects with history, relationships that accumulate - forgetting is expensive.
+Most memory frameworks solve this by building a better filing cabinet. Store more. Index better. Retrieve faster. And that works - for the moment someone thinks to ask. But human memory does not work that way. You do not query your past. Your past queries you. A smell pulls up a room you have not thought about in years. A phrase someone uses reminds you of a decision you made last week. Associations surface uninvited.
 
-## What breathe does differently
+Breathe works that way.
 
-Existing memory frameworks (Mem0, Zep, LangMem, Cognee) solve **retrieval**: given a query, find relevant memories. Breathe adds three things they don't have:
+## What it does
 
-### 1. Continuous tethering (breathing)
+### Breathing
 
-Every few conversational turns, breathe queries your knowledge store in the background with whatever the user is currently discussing. Results are cached and injected into the *next* turn as peripheral context - one turn delayed, like real memory catching up. Zero latency cost.
+Every few conversational turns, breathe queries the knowledge store with whatever the person is currently talking about. Not because anyone asked - because that is what tethered memory does. The results arrive one turn later, as peripheral context. The model does not have to stop and search. The relevant past is already in the room.
 
-```
-Turn 15: user asks about sheaf theory
-Turn 15: (background) breathe queries the store for "sheaf theory"
-Turn 16: user asks a follow-up
-Turn 16: breathe injects: "Memory sees [Sheaf Laplacian, FlyWire, Poincare]
-          near 'sheaf theory'. Query for depth if needed."
-```
+This is the difference between a notebook you carry and a notebook that reads itself back to you while you work.
 
-The model stays connected to everything it has learned without anyone asking it to look things up.
+### Recovery
 
-### 2. Graceful forgetting (recovery)
+Forgetting will happen. Context windows are finite. The useful goal is not preventing forgetting - it is waking up oriented rather than blank.
 
-When context compression happens, breathe detects it (transcript size shrinks >50%) and automatically rebuilds identity and context from multiple sources: who the agent is, what it was doing, what it has learned, what changed recently.
+When compression happens, breathe detects it and rebuilds: who the agent is, what it was working on, what decisions were made, what the person cares about. The model opens its eyes knowing where it is.
 
-The model wakes up oriented instead of blank.
+You have experienced this if you have ever woken up in a hotel room. For a moment you do not know where you are. Then the pieces arrive: the city, the reason for the trip, what you need to do today. Recovery is engineering that moment to be fast and reliable instead of slow and partial.
 
-### 3. Identity-driven retrieval
+### Identity
 
-What surfaces is shaped by who the person is - their preferences, their intellectual arc, their rejected approaches - not just semantic similarity. The identity layer accumulates across sessions.
+Two people asking the same question should get different answers from memory. A researcher asking "what about sheaf theory" needs the mathematical structure. A product manager asking the same question needs the business implication. What surfaces should be shaped by who is asking - their preferences, their history, their rejected approaches, their arc.
 
-## Quickstart (30 seconds, zero dependencies)
+This is not personalisation. It is how memory works. Your memory of a conversation is shaped by your relationship to the person you were talking to. The same words carry different weight depending on who said them.
 
-```bash
-git clone https://github.com/agilemeshnet/breathe.git
-cd breathe
-python3 examples/quickstart.py
-```
-
-Uses SQLite only. No graph database, no vector index, no API keys.
-
-## Core components
-
-| Module | Purpose |
-|--------|---------|
-| `core/breathing.py` | Proactive background queries, cached injection |
-| `core/recovery.py` | Compaction detection, multi-source identity reconstruction |
-| `core/identity.py` | Persistent person model that accumulates across sessions |
-| `core/retrieval.py` | Four-arm retrieval (vector + graph + episodic + speculative) |
-
-## The methodology
-
-**Panorama + Continuous Tethering + Directed Zoom, driven by an accumulated model of the person and their trajectory.**
-
-Three capabilities:
-- **Vista** - panoramic overview before zoom
-- **Tethering** - background queries every N turns, associations surface uninvited
-- **Foveation** - attention directed by salience for this person, not statistical nearest
-
-Plus the foundation:
-- **Identity** - persistent model of who the agent serves, built across sessions
-
-## Adapters
-
-Breathe sits on top of existing knowledge stores, not instead of them.
-
-| Adapter | Status | Notes |
-|---------|--------|-------|
-| SQLite (FTS5) | Working | Zero-dependency starter |
-| Neo4j/AuraDB | Planned | Full graph-backed retrieval |
-| FAISS | Planned | Vector similarity arm |
-| Cognee | Planned | Semantic memory integration |
-| Mem0 | Planned | Fact extraction integration |
-| ChromaDB | Planned | Vector store alternative |
-
-## Claude Code integration
-
-Breathe includes hooks for Claude Code's `UserPromptSubmit` event:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{
-      "type": "command",
-      "command": "python3 /path/to/breathe/hooks/claude_code.py"
-    }]
-  }
-}
-```
-
-The hook fires on every user message, runs the breathing cycle, and prints any injection text to stdout (which Claude Code injects as context).
-
-## Theoretical grounding
-
-The architecture is grounded in Andy Clark and David Chalmers' [Extended Mind thesis](https://en.wikipedia.org/wiki/Extended_mind_thesis) (1998): if an external process performs the same functional role as an internal cognitive process, it is part of cognition. The parity principle.
-
-Real-world precedent: Patrick Jones, a Catholic deacon in Colorado Springs with a memory condition, uses Evernote trails to maintain continuity across social and professional interactions. Clark argues that Jones reaching for his Evernote is not "looking something up" - it is remembering.
-
-Breathe takes this one step further: the system queries the knowledge store *before being asked*, surfacing relevant context proactively - closer to how biological memory actually works, where associations rise unbidden.
-
-## Architecture
+## How it works
 
 ```
                     +-----------+
@@ -129,18 +56,61 @@ Breathe takes this one step further: the system queries the knowledge store *bef
                            |
                     +------+------+
                     |  Knowledge  |
-                    |    Store    |  <-- SQLite, Neo4j, FAISS, Cognee...
+                    |    Store    |
                     +-------------+
+```
+
+Retrieval has four arms, each returning different evidence for the same query:
+
+- **Vector** - what sounds like this?
+- **Graph** - what connects to this?
+- **Episodic** - have we been here before?
+- **Speculative** - what else might matter?
+
+Breathe sits on top of existing knowledge stores, not instead of them. SQLite works out of the box. Neo4j, FAISS, Cognee, Mem0, and ChromaDB adapters are planned.
+
+## Try it
+
+```bash
+git clone https://github.com/agilemeshnet/breathe.git
+cd breathe
+python3 examples/quickstart.py
+```
+
+No dependencies beyond Python. No API keys. No cloud services.
+
+## Use it
+
+Claude Code hook:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "type": "command",
+      "command": "python3 /path/to/breathe/hooks/claude_code.py"
+    }]
+  }
+}
+```
+
+MCP server:
+
+```json
+{
+  "mcpServers": {
+    "breathe": {
+      "command": "python3",
+      "args": ["/path/to/breathe/mcp/server.py"]
+    }
+  }
+}
 ```
 
 ## Contributing
 
-This project grew from a real system running 300+ sessions. Contributions welcome - especially adapters for additional knowledge stores.
+Contributions welcome - especially adapters for additional knowledge stores.
 
 ## License
 
 MIT
-
----
-
-*Built by [AgileMesh](https://agilemesh.net). The breathing dot pulses for as long as the conversation runs.*
